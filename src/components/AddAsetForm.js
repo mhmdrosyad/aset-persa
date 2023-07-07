@@ -2,11 +2,24 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { v4 as uuidv4 } from 'uuid';
 import { Form, Button, Alert } from 'react-bootstrap';
-import getLocalStorageData from '../utils/getLocalStorageData';
+
+const InfoWrapper = (props) => {
+  const { status } = props;
+
+  if(status !== null){
+    if(status === false) {
+      return(
+        <Alert variant="danger">Data Gagal Ditambahkan</Alert>
+      );
+    }
+    return (<Alert variant="success">Data Berhasil Ditambahkan</Alert>);
+  }
+  return <></>;
+};
 
 const AddAsetForm = () => {
   const [state, setState] = useState({ nama: '', stock: 0});
-  const [isSuccess, setIsSuccess] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(null);
   const navigate = useNavigate();
   const handleNameChange = (e) => {
     setState({ ...state, nama: e.target.value })
@@ -17,13 +30,23 @@ const AddAsetForm = () => {
   }
 
   const handleSubmit = (e) => {
-    const asets = getLocalStorageData('asets')
-    const asetId = uuidv4();
+    const options = {
+      method: 'POST',
+      headers: {'Content-Type' : 'application/json'},
+      body: JSON.stringify(state)
+    };
 
-    asets.push({ ...state, id: asetId });
+    async function fetchData() {
+      const response = await fetch('http://localhost:5000/aset', options);
+      if(response.ok) {
+        setIsSuccess(true);
+        setTimeout(() => navigate('/') , 3000) ;
+      } else{
+        setIsSuccess(false)
+      }
+    }
 
-    localStorage.setItem('asets', JSON.stringify(asets));
-    setIsSuccess(true);
+    fetchData();
     e.preventDefault();
   }
 
@@ -31,7 +54,7 @@ const AddAsetForm = () => {
 
   return (
     <>
-     {isSuccess && <Alert variant="success">Data Berhasil Ditambahkan</Alert>}
+     <InfoWrapper status={isSuccess} />
       <Form onSubmit={handleSubmit}>
       <Form.Group className="mb-3" controlId="namaBarang">
         <Form.Label>Nama barang</Form.Label>

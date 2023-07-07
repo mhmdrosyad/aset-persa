@@ -1,20 +1,37 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Form, Button } from 'react-bootstrap';
-import getLocalStorageData from '../utils/getLocalStorageData';
+import { Form, Button, Alert } from 'react-bootstrap';
+
+const InfoWrapper = (props) => {
+  const { status } = props;
+
+  if(status !== null){
+    if(status === false) {
+      return(
+        <Alert variant="danger">Data Gagal Diupdate</Alert>
+      );
+    }
+    return (<Alert variant="success">Data Berhasil Diupdate</Alert>);
+  }
+  return <></>;
+};
 
 const EditAsetForm = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [allAsets, setAllAsets] = useState(null);
   const [currentAset, setCurrentAset] = useState({ nama: '', stock: 0 });
+  const [isSuccess, setIsSuccess] = useState(null);
 
   useEffect(() => {
-    const asets = getLocalStorageData('asets');
-    setAllAsets(asets);
     const asetId = location.pathname.replace('/edit/', '');
-    const currentAset = asets.filter((aset) => aset.id === asetId);
-    setCurrentAset(currentAset[0]);
+
+    async function fetchData(){
+      const response = await fetch(`http://localhost:5000/aset/${asetId}`);
+      const data = await response.json();
+      setCurrentAset(data);
+    }
+    fetchData();
   }, []);
 
   const handleNameChange = (e) => {
@@ -26,30 +43,47 @@ const EditAsetForm = () => {
   }
 
   const handleSubmit = (e) => {
-    const newAsets = allAsets.map((aset) => {
-      if (aset.id === currentAset.id) {
-        return { ...aset, title: currentAset.nama, stock: currentAset.stock };
-      } else {
-        return aset;
+    const options = {
+      method: 'PUT',
+      headers: {'Content-Type' : 'application/json'},
+      body: JSON.stringify(currentAset)
+    }
+    
+    async function submitData() {
+      const response = await fetch(`http://localhost:5000/aset/${currentAset._id}`, options);
+      if(response.ok) {
+        setIsSuccess(true);
+        setTimeout(() => navigate('/') , 3000) ;
+      } else{
+        setIsSuccess(false)
       }
-    });
-    localStorage.setItem('asets', JSON.stringify(newAsets));
-    navigate('/');
+    }
+
+    submitData();
     e.preventDefault();
   };
 
   const handleDeleteAset = (e) => {
-    const newAsets = allAsets.filter((aset) => aset.id !== currentAset.id);
-    setCurrentAset(null);
-    setAllAsets(newAsets);
-    localStorage.setItem('asets', JSON.stringify(newAsets));
-    navigate('/');
+    const options = {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' }
+    };
+
+    async function deleteData() {
+      const response = await fetch(`http://localhost:5000/aset/${currentAset._id}`, options);
+      if(response.ok) {
+        navigate('/');
+      }
+    }
+
+    deleteData();
   }
 
   const { nama, stock } = currentAset;
 
   return (
     <>
+    <InfoWrapper status={isSuccess} />
       <Form onSubmit={handleSubmit}>
       <Form.Group className="mb-3" controlId="namaBarang">
         <Form.Label>Nama barang</Form.Label>
